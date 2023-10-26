@@ -76,20 +76,49 @@ class StubModule(StubEntry):
             module_path = output_path.joinpath(f"{self.name}.pyi")
 
         # create init file
-        out = [f"from typing import Any, Optional, overload, Typing, Sequence",
+        out = [f"from typing import Any, Optional, overload, Typing, Sequence, Callable",
                f"from enum import Enum",
+               f"import os",
+               f"import numpy.typing",
                f"import {self.import_path}"]
-
+        
         with open(module_path, "w") as f:
             text = self._create_string(out, intent)
             f.writelines(text)
 
         for child in self.children:
-            child.export(module_path)
+            if isinstance(child, StubModule):
+                child.export(output_path)
+            else:
+                child.export(module_path)
+
+        out = []
+        out.append("__all__ = [")
+        for child in self.children:
+            if isinstance(child, StubImport):
+                out.append(f"    \"{child.name}\",")
+        out.append("]")
+
+        with open(module_path, "a") as f:
+            text = self._create_string(out, intent)
+            f.writelines(text)
 
     @property
     def has_sub_modules(self) -> bool:
         return len([child for child in self.children if isinstance(child, StubModule)]) > 0
+
+
+class StubImport(StubEntry):
+    def __init__(self, name: str, obj: Any, module: str):
+        super().__init__(name, obj)
+        self.module = module
+
+    def export(self, output_path: Path, intent: int = 0):
+        out = [f"from {self.module} import {self.name}"]
+
+        with open(output_path, "a") as f:
+            text = self._create_string(out, intent)
+            f.writelines(text)
 
 
 class StubNanobindConstant(StubEntry):
@@ -277,6 +306,10 @@ class StubNanobindFunction(StubRoutine):
 
         self.signature = utils.post_process_signature(self.signature)
 
+        # first function needs to have @overload as well
+        if len(overloads) > 0:
+            self.annotations.append("@overload")
+
         for sig, doc in overloads:
             sig = utils.post_process_signature(sig)
             self.children.append(StubNanobindOverloadFunction(self.name, self.obj, sig, doc))
@@ -346,7 +379,24 @@ class NanobindStubsGenerator:
             if name.startswith("_") and name != "__init__":
                 continue
 
+            # filter out @entries member on enum types
+            if name == "@entries":
+                continue
+
             has_been_handled = False
+
+            # check if member is imported from another module
+            member_module = self._get_value_parent_module_name(obj)
+            if (
+                member_module is not None
+                and member_module != module.__name__
+            ):
+                # detect module and class imports
+                if inspect.ismodule(obj):
+                    stub_entry.children.append(StubImport(name, obj, member_module))
+                if inspect.isclass(obj):
+                    stub_entry.children.append(StubImport(name, obj, member_module))
+                continue
 
             if inspect.isclass(obj):
                 if type(obj).__name__ == "nb_type":
@@ -374,7 +424,9 @@ class NanobindStubsGenerator:
                 else:
                     if name == "__init__":
                         module_name = type(module).__name__
-                        if module_name == "nb_enum" or module_name == "nb_type":
+                        # nb_type has number suffix
+                        if module_name.startswith("nb_enum") or module_name.startswith("nb_type"):
+                        # if module_name == "nb_enum" or module_name == "nb_type":
                             # todo: handle enum and type constructors
                             stub_routine = StubNanobindConstructor(name, obj, suppress_warning=True)
                         else:
@@ -409,3 +461,10 @@ class NanobindStubsGenerator:
                 print(f"{inspect.getmodule(module).__name__}.{name}: {type(obj).__name__}")
 
         return stub_entry
+
+    def _get_value_parent_module_name(self, obj: Any) -> str | None:
+        if inspect.ismodule(obj):
+            return obj.__name__.rsplit(".", 1)[0]
+        if inspect.isclass(obj) or inspect.isroutine(obj):
+            return getattr(obj, "__module__", None)
+        return None
