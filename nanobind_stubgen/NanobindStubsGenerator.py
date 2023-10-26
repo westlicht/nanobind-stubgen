@@ -81,7 +81,7 @@ class StubModule(StubEntry):
                f"import os",
                f"import numpy.typing",
                f"import {self.import_path}"]
-        
+
         with open(module_path, "w") as f:
             text = self._create_string(out, intent)
             f.writelines(text)
@@ -394,9 +394,10 @@ class NanobindStubsGenerator:
                 # detect module and class imports
                 if inspect.ismodule(obj):
                     stub_entry.children.append(StubImport(name, obj, member_module))
+                    continue
                 if inspect.isclass(obj):
                     stub_entry.children.append(StubImport(name, obj, member_module))
-                continue
+                    continue
 
             if inspect.isclass(obj):
                 if type(obj).__name__ == "nb_type":
