@@ -376,7 +376,7 @@ class NanobindStubsGenerator:
 
     def _analyse_module(self, module: Any, stub_entry: StubEntry) -> StubModule:
         for name, obj in inspect.getmembers(module):
-            if name.startswith("_") and name != "__init__":
+            if name.startswith("_") and name != "__init__" and name != "__enter__" and name != "__exit__" and name != "__getattr__":
                 continue
 
             # filter out @entries member on enum types
