@@ -78,9 +78,14 @@ class StubModule(StubEntry):
         # create init file
         out = [f"from typing import Any, Optional, overload, Typing, Sequence, Callable",
                f"from enum import Enum",
+               f"from pathlib import WindowsPath, PosixPath",
                f"import os",
                f"import numpy.typing",
                f"import {self.import_path}"]
+
+        for child in self.children:
+            if isinstance(child, StubModule):
+                out.append(f"from . import {child.name}")
 
         with open(module_path, "w") as f:
             text = self._create_string(out, intent)
