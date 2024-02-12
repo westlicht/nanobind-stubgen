@@ -129,7 +129,7 @@ class StubImport(StubEntry):
 class StubNanobindConstant(StubEntry):
 
     def export(self, output_path: Path, intent: int = 0):
-        out = [f"{self.name}: {str(type(self.obj).__name__)}"]
+        out = [f"{self.name}: {str(type(self.obj).__qualname__)}"]
 
         with open(output_path, "a") as f:
             text = self._create_string(out, intent)
@@ -391,18 +391,19 @@ class NanobindStubsGenerator:
             has_been_handled = False
 
             # check if member is imported from another module
-            member_module = self._get_value_parent_module_name(obj)
-            if (
-                member_module is not None
-                and member_module != module.__name__
-            ):
-                # detect module and class imports
-                if inspect.ismodule(obj):
-                    stub_entry.children.append(StubImport(name, obj, member_module))
-                    continue
-                if inspect.isclass(obj):
-                    stub_entry.children.append(StubImport(name, obj, member_module))
-                    continue
+            # member_module = self._get_value_parent_module_name(obj)
+            # if (
+            #     member_module is not None
+            #     and member_module != module.__name__
+            # ):
+            #     print("member module", name, module.__name__, member_module)
+            #     # detect module and class imports
+            #     if inspect.ismodule(obj):
+            #         stub_entry.children.append(StubImport(name, obj, member_module))
+            #         continue
+            #     if inspect.isclass(obj):
+            #         stub_entry.children.append(StubImport(name, obj, member_module))
+            #         continue
 
             if inspect.isclass(obj):
                 if type(obj).__name__ == "nb_type":
