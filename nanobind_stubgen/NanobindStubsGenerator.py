@@ -76,7 +76,7 @@ class StubModule(StubEntry):
             module_path = output_path.joinpath(f"{self.name}.pyi")
 
         # create init file
-        out = [f"from typing import Any, Optional, overload, Typing, Sequence, Callable",
+        out = [f"from typing import Any, Optional, overload, Typing, Sequence, List, Callable",
                f"from enum import Enum",
                f"from pathlib import WindowsPath, PosixPath",
                f"import os",
@@ -468,7 +468,7 @@ class NanobindStubsGenerator:
 
         return stub_entry
 
-    def _get_value_parent_module_name(self, obj: Any) -> str | None:
+    def _get_value_parent_module_name(self, obj: Any) -> str:
         if inspect.ismodule(obj):
             return obj.__name__.rsplit(".", 1)[0]
         if inspect.isclass(obj) or inspect.isroutine(obj):
