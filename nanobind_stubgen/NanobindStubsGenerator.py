@@ -116,7 +116,7 @@ class StubModule(StubEntry):
 class StubNanobindConstant(StubEntry):
 
     def export(self, output_path: Path, intent: int = 0):
-        out = [f"{self.name}: {str(type(self.obj).__name__)}"]
+        out = [f"{self.name}: {str(type(self.obj).__qualname__)}"]
 
         with open(output_path, "a") as f:
             text = self._create_string(out, intent)
@@ -375,7 +375,7 @@ class NanobindStubsGenerator:
 
     def _analyse_module(self, module: Any, stub_entry: StubEntry) -> StubModule:
         for name, obj in inspect.getmembers(module):
-            if name.startswith("_") and name != "__init__":
+            if name.startswith("_") and name != "__init__" and name != "__enter__" and name != "__exit__" and name != "__getattr__":
                 continue
 
             has_been_handled = False
